@@ -1,34 +1,80 @@
-# NOTE: update this with your service name
-service: notes-api
+  service: notes-api
 
-# Create an optimized package for our functions 
-package:
-  individually: true
+  # Create an optimized package for our functions
+  package:
+    individually: true
+    plugins:
+      - serverless-bundle # Package our functions with Webpack
+      - serverless-offline
+      - serverless-dotenv-plugin # Load .env as environment variables
 
-plugins:
-  - serverless-bundle # Package our functions with Webpack
-  - serverless-offline
-  - serverless-dotenv-plugin # Load .env as environment variables
+  provider:
+    name: aws
+    runtime: nodejs20.x
+    stage: prod
+    region: us-east-1
 
-provider:
-  name: aws
-  runtime: nodejs14.x
-  stage: dev
-  region: us-east-1
-  deployBucket:
-    name: notes-api
-  # To load environment variables externally
-  # rename env.example to .env and uncomment
-  # the following line. Also, make sure to not
-  # commit your .env.
-  #
-  #environment:
-  #  SAMPLE_ENV_VAR: ${env:SAMPLE_ENV_VAR}
+    # These environment variables are made available to our functions
+    # under process.env.
+    environment:
+      tableName: note
 
-functions:
-  hello:
-    handler: handler.hello
-    events:
-      - http:
-          path: hello
-          method: get
+    # 'iamRoleStatements' defines the permission policy for the Lambda function.
+    # In this case Lambda functions are granted with permissions to access DynamoDB.
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Scan
+          - dynamodb:Query
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:DescribeTable
+        Resource: "arn:aws:dynamodb:us-east-1:*:*"
+
+  functions:
+    # Defines an HTTP API endpoint that calls the main function in create.js
+    create:
+      handler: create.main
+      events:
+        - http:
+            path: note
+            method: post
+            authorizer: aws_iam
+
+    # Defines an HTTP API endpoint that calls the main function in get.js
+    get:
+      handler: get.main
+      events:
+        - http:
+            path: note/{id}
+            method: get
+            authorizer: aws_iam
+
+    # Defines an HTTP API endpoint that calls the main function in list.js
+    list:
+      handler: list.main
+      events:
+        - http:
+            path: note
+            method: get
+            authorizer: aws_iam
+
+    # Defines an HTTP API endpoint that calls the main function in update.js
+    update:
+      handler: update.main
+      events:
+        - http:
+            path: note/{id}
+            method: put
+            authorizer: aws_iam
+
+    # Defines an HTTP API endpoint that calls the main function in delete.js
+    delete:
+      handler: delete.main
+      events:
+        - http:
+            path: note/{id}
+            method: delete
+            authorizer: aws_iam
