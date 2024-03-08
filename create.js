@@ -9,7 +9,7 @@ async function main(event, context) {
     const params = {
         TableName: process.env.tableName,
         Item: {
-            userId: "123", // The id of the author
+            userId: event.requestContext.identity.cognitoIdentityId, // The id of the author
             noteId: uuid.v1(), // A unique uuid
             content: data.content, // Parsed from request body
             attachment: data.attachment, // Parsed from request body

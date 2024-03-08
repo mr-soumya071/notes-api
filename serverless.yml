@@ -1,80 +1,107 @@
-  service: notes-api
+service: note-api
 
-  # Create an optimized package for our functions
-  package:
-    individually: true
-    plugins:
-      - serverless-bundle # Package our functions with Webpack
-      - serverless-offline
-      - serverless-dotenv-plugin # Load .env as environment variables
+package:
+  individually: true
+  plugins:
+    - serverless-bundle # Package our functions with Webpack
+    - serverless-offline
+    - serverless-dotenv-plugin # Load .env as environment variables
+    - serverless-aws-alias
 
-  provider:
-    name: aws
-    runtime: nodejs20.x
-    stage: prod
-    region: us-east-1
+cors:
+origin: "*"
+headers:
+  - Content-Type
+  - X-Amz-Date
+  - Authorization
+  - X-Api-Key
+  - X-Amz-Security-Token
+  - X-Amz-User-Agent
+allowCredentials: false
 
-    # These environment variables are made available to our functions
-    # under process.env.
-    environment:
-      tableName: note
+# Create our resources with separate CloudFormation templates
+resources:
+  # API Gateway Errors
+  - ${file(resources/api-gateway-errors.yml)}
 
-    # 'iamRoleStatements' defines the permission policy for the Lambda function.
-    # In this case Lambda functions are granted with permissions to access DynamoDB.
-    iamRoleStatements:
-      - Effect: Allow
-        Action:
-          - dynamodb:Scan
-          - dynamodb:Query
-          - dynamodb:GetItem
-          - dynamodb:PutItem
-          - dynamodb:UpdateItem
-          - dynamodb:DeleteItem
-          - dynamodb:DescribeTable
-        Resource: "arn:aws:dynamodb:us-east-1:*:*"
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: prod
+  region: us-east-1
 
-  functions:
-    # Defines an HTTP API endpoint that calls the main function in create.js
-    create:
-      handler: create.main
-      events:
-        - http:
-            path: note
-            method: post
-            authorizer: aws_iam
+  environment:
+    tableName: note
 
-    # Defines an HTTP API endpoint that calls the main function in get.js
-    get:
-      handler: get.main
-      events:
-        - http:
-            path: note/{id}
-            method: get
-            authorizer: aws_iam
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Scan
+        - dynamodb:Query
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:DescribeTable
+      Resource: "arn:aws:dynamodb:us-east-1:*:*"
 
-    # Defines an HTTP API endpoint that calls the main function in list.js
-    list:
-      handler: list.main
-      events:
-        - http:
-            path: note
-            method: get
-            authorizer: aws_iam
+functions:
+  create:
+    handler: create.main
+    package:
+      include:
+        - node_modules/**
+    events:
+      - http:
+          path: note
+          method: post
+          cors: true
+          authorizer: aws_iam
 
-    # Defines an HTTP API endpoint that calls the main function in update.js
-    update:
-      handler: update.main
-      events:
-        - http:
-            path: note/{id}
-            method: put
-            authorizer: aws_iam
+  get:
+    handler: get.main
+    package:
+      include:
+        - node_modules/**
+    events:
+      - http:
+          path: note/{id}
+          method: get
+          cors: true
+          authorizer: aws_iam
 
-    # Defines an HTTP API endpoint that calls the main function in delete.js
-    delete:
-      handler: delete.main
-      events:
-        - http:
-            path: note/{id}
-            method: delete
-            authorizer: aws_iam
+  list:
+    handler: list.main
+    package:
+      include:
+        - node_modules/**
+    events:
+      - http:
+          path: note
+          method: get
+          cors: true
+          authorizer: aws_iam
+
+  update:
+    handler: update.main
+    package:
+      include:
+        - node_modules/**
+    events:
+      - http:
+          path: note/{id}
+          method: put
+          cors: true
+          authorizer: aws_iam
+
+  delete:
+    handler: delete.main
+    package:
+      include:
+        - node_modules/**
+    events:
+      - http:
+          path: note/{id}
+          method: delete
+          cors: true
+          authorizer: aws_iam
